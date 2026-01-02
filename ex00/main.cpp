@@ -10,11 +10,7 @@ int main(int ac, char *av[])
     ScalarConverter::convert(av[1]);
 
     
-    // std::string b(c);
-//    std::string str = "   hello   ";
-//     std::istringstream iss(str);
-//     // std::string word;
-//     iss >> str;
-//     std::cout << str;
+    // float x = 218.1;
+    // std::cout << x;
 
 }
