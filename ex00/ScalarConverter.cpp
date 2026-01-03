@@ -1,4 +1,5 @@
 #include "ScalarConverter.hpp"
+#include <iomanip>
 
 ScalarConverter::ScalarConverter(){}
 
@@ -29,21 +30,19 @@ int imposy(std::string str)
         return 1;
     return 0;
 }
-int check_duplicate(std::string type, std::string occur)
+int check_float(std::string type, float *myFloat)
 {
-    size_t firstOcc = type.find_first_of(occur);
-    
-    size_t secOcc = type.find_last_of(occur);
-    std::cout << "first " << firstOcc << '\n';
-    std::cout << "sec " << secOcc << '\n';
-    if ((firstOcc && !secOcc) || (secOcc && !firstOcc && type[0] != occur[0]) \
-    || (firstOcc == secOcc && type[0] != occur[0] && \
-     type[type.length() - 1] != type[firstOcc] && type[type.length() - 1] != type[secOcc]))
-        return 1;
-    return 0;
+    char *ptr;
+    float toFloat = strtof(type.c_str(), &ptr);
 
+    if (ptr[0] == 'f' && !ptr[1] && type.find_first_of(".") != std::string::npos)
+    {
+        *myFloat = toFloat;
+        return 1;
+    }
+    return 0;
 }
-int detectType(std::string type)
+int detectType(std::string type, bool *check_dot, float *myFloat)
 {
     if (imposy(type) == 0)
         return 0;
@@ -57,18 +56,42 @@ int detectType(std::string type)
     size_t pos = str.find_last_of("+-");
     if (find == std::string::npos || (findAll == std::string::npos && pos == 0))
         return 2;
-    if (check_duplicate(str, ".") && type[type.length() - 1] == 'f')
-    {
-        std::cout << "Iam Float\n";
+    if (check_float(type, myFloat))
+    {   
+        if (type[type.length() - 2] == '.' /*|| type[type.length() - 2] == '0'*/)
+            *check_dot = true;
         return 3;
     }
     
     return 0;
 }
-
+void print_char(int type, int iType, float fType)
+{
+    if (type == 2)
+    {
+        if ((iType >= 0 && iType <= 31) || iType == 127)
+            std::cout << "Char: Non displayable\n";
+        else if (iType < 0 || iType > 127)
+            std::cout << "char: impossible\n";
+        else
+            std::cout << "Char: '" << static_cast<char>(iType) << "'\n";
+    }
+    else if (type == 3)
+    {
+        if ((fType >= 0 && fType <= 31) || fType == 127)
+            std::cout << "Char: Non displayable\n";
+        else if (fType < 0 || fType > 127)
+            std::cout << "char: impossible\n";
+        else
+            std::cout << "Char: '" << static_cast<char>(fType) << "'\n";
+    }
+    
+}
 void ScalarConverter::convert(std::string type)
 {
-    int retType = detectType(type);
+    bool check_dot = 0;
+    float myFloat = 0;
+    int retType = detectType(type, &check_dot, &myFloat);
     char* end_ptr;
     errno = 0;
 
@@ -84,22 +107,42 @@ void ScalarConverter::convert(std::string type)
     {
         int typeInt = atoi(type.c_str());
     /******************CHAR_TYPE**************/
-        if ((typeInt >= 0 && typeInt <= 31) || typeInt == 127)
-            std::cout << "Char: Non displayable\n";
-        else if (typeInt < 0 || typeInt > 127)
-            std::cout << "char: impossible\n";
-        else
-            std::cout << "Char: '" << static_cast<char>(typeInt) << "'\n";
+        print_char(retType, typeInt, myFloat);
     /******************INT_TYPE**************/
-        if (val < INT_MIN || val > INT_MAX || errno == ERANGE  /* || end_ptr */)
+        if (val < INT_MIN || val > INT_MAX || errno == ERANGE)
+        {
             std::cout << "int: impossible\n";
+            std::cout << "float: " << static_cast<float>(typeInt) << "f" << '\n';
+            
+        }
         else
+        {
             std::cout << "int: " << typeInt << '\n';
+            if (type.length() >= 7)
+                std::cout << "float: " << static_cast<float>(typeInt) << "f" << '\n';
+            else
+                std::cout << "float: " << static_cast<float>(typeInt) << ".0f" << '\n';
+        }
     }
-    // else if (retType == 3)
-    // {
-    //     std::cout << "Iam Float\n";
-    // }
+    /******************FLOAT_TYPE**************/
+    
+    if (retType == 3)
+    {
+        
+        // std::cout << std::fixed << std::setprecision(1);
+        print_char(retType, 0, myFloat);
+        std::cout << "int: " << static_cast<int>(myFloat) << '\n';
+        if (type.length() >= 8 || type[type.find_first_of(".") + 1] != 'f')
+            std::cout << "float: " << myFloat << "f\n";
+        else if (check_dot && type.find_first_of(".") <= 6)
+            std::cout << "float: " << myFloat << ".0f\n";
+
+        // if (check_dot && type.find_first_of(".") != std::string::npos && type.find_first_of(".") <= 6)
+        //     std::cout << "float: " << myFloat << ".0f\n";
+        // std::cout << "float: " << myFloat << "f\n";
+        // else if (!check_dot)
+        //     std::cout << "float: " << myFloat << "f\n";
+    }
 
 }
 
