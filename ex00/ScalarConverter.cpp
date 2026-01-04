@@ -19,131 +19,142 @@ ScalarConverter& ScalarConverter::operator=(const ScalarConverter& original)
     return *this;
 }
 
-int imposy(std::string str)
-{
-    std::istringstream in(str);
-
-    size_t first = str.find_first_not_of(" \t\n\r\v\f");
-    size_t last = str.find_last_not_of(" \t\n\r\v\f");
-    in >> str;
-    if (last - first == str.length() - 1)
-        return 1;
-    return 0;
-}
-int check_float(std::string type, float *myFloat)
+int check_dbft(std::string type, double *myDb)
 {
     char *ptr;
-    float toFloat = strtof(type.c_str(), &ptr);
 
+    *myDb = std::strtod(type.c_str(), &ptr);
     if (ptr[0] == 'f' && !ptr[1] && type.find_first_of(".") != std::string::npos)
+        return 1;
+    else if (!*ptr && type.find_first_of(".") != std::string::npos)
+        return 2;
+
+    return 0;
+}
+int imposy(std::string &str)
+{
+    std::istringstream in(str);
+    std::string tmp;
+    
+    size_t first = str.find_first_not_of(" \t\n\r\v\f");
+    size_t last = str.find_last_not_of(" \t\n\r\v\f");
+    in >> tmp;
+    if (last - first == tmp.length() - 1)
     {
-        *myFloat = toFloat;
+        str = tmp;
         return 1;
     }
     return 0;
 }
-int detectType(std::string type, bool *check_dot, float *myFloat)
+void print_char(int iType)
 {
+ 	if ((iType >= 0 && iType <= 31) || iType == 127)
+ 	    std::cout << "Char: Non displayable\n";
+ 	else if (iType < 0 || iType > 127)
+ 	    std::cout << "char: impossible\n";
+ 	else
+ 	    std::cout << "Char: '" << static_cast<char>(iType) << "'\n";
+}
+int check_nano(std::string type)
+{
+	if (type == "nan" || type == "nanf" || type == "+inf" || type == "-inf" || type == "+inff" || type == "-inff")
+	{
+		std::cout << "char: impossible" << '\n';
+		std::cout << "int: impossible" << '\n';
+		if (type == "nan" || type == "nanf")
+		{
+			std::cout << "float: nanf" << '\n';
+			std::cout << "double: nan" << '\n';
+		}
+		if (type == "+inf" || type == "+inff")
+		{
+			std::cout << "float: +inff" << '\n';
+			std::cout << "double: +inf" << '\n';
+		}
+		if (type == "-inf" || type == "-inff")
+		{
+			std::cout << "float: -inff" << '\n';
+			std::cout << "double: -inf" << '\n';
+		}
+		return 1;
+	}
+	return 0;
+}
+
+int detectType(std::string &type, double *myDb)
+{
+	int lenBefore = type.length();
     if (imposy(type) == 0)
         return 0;
-    if (type.length() == 1 && !std::isdigit(type[0]))
-        return 1;
-    std::istringstream f(type);
-    f >> type;
+    if (lenBefore == 1 && !std::isdigit(type[0]))
+	    return 1;
     std::string str = type.c_str();
     size_t find = str.find_first_not_of("0123456789");
     size_t findAll = str.find_first_not_of("+-0123456789");
     size_t pos = str.find_last_of("+-");
     if (find == std::string::npos || (findAll == std::string::npos && pos == 0))
         return 2;
-    if (check_float(type, myFloat))
-    {   
-        if (type[type.length() - 2] == '.' /*|| type[type.length() - 2] == '0'*/)
-            *check_dot = true;
+    if (check_dbft(type, myDb) == 1)
         return 3;
-    }
-    
+    if (check_dbft(type, myDb) == 2)
+        return 4;
+	if (check_nano(type))
+		return 5;
     return 0;
 }
-void print_char(int type, int iType, float fType)
-{
-    if (type == 2)
-    {
-        if ((iType >= 0 && iType <= 31) || iType == 127)
-            std::cout << "Char: Non displayable\n";
-        else if (iType < 0 || iType > 127)
-            std::cout << "char: impossible\n";
-        else
-            std::cout << "Char: '" << static_cast<char>(iType) << "'\n";
-    }
-    else if (type == 3)
-    {
-        if ((fType >= 0 && fType <= 31) || fType == 127)
-            std::cout << "Char: Non displayable\n";
-        else if (fType < 0 || fType > 127)
-            std::cout << "char: impossible\n";
-        else
-            std::cout << "Char: '" << static_cast<char>(fType) << "'\n";
-    }
-    
-}
+
 void ScalarConverter::convert(std::string type)
 {
-    bool check_dot = 0;
-    float myFloat = 0;
-    int retType = detectType(type, &check_dot, &myFloat);
+    double myDb = 0;
+    int retType = detectType(type, &myDb);
     char* end_ptr;
     errno = 0;
-
     long val = std::strtol(type.c_str(), &end_ptr, 10);
     if (retType == 0)
     {
         allImposi();
         return ;
     }
+    /******************NAAAAAN**************/
+	// print_naan(type);
+    /******************CHAR_TYPE**************/
     if (retType == 1)
-        std::cout << "Char: " << type[0] << '\n';
+    {
+        std::cout << "char: " << type[0] << '\n';
+        std::cout << "int: " << static_cast<int>(type[0]) << '\n';
+        std::cout << "float: " << std::fixed << std::setprecision(1) << static_cast<float>(type[0]) << "f\n";
+		std::cout << "double: " << static_cast<double>(type[0]) << "\n";
+    }
     else if (retType == 2)
     {
-        int typeInt = atoi(type.c_str());
-    /******************CHAR_TYPE**************/
-        print_char(retType, typeInt, myFloat);
     /******************INT_TYPE**************/
+        int typeInt = atoi(type.c_str());
+        print_char(typeInt);
         if (val < INT_MIN || val > INT_MAX || errno == ERANGE)
         {
             std::cout << "int: impossible\n";
-            std::cout << "float: " << static_cast<float>(typeInt) << "f" << '\n';
-            
+            std::cout << "float: impossible\n";
+            std::cout << "double: impossible\n";
         }
         else
         {
             std::cout << "int: " << typeInt << '\n';
-            if (type.length() >= 7)
-                std::cout << "float: " << static_cast<float>(typeInt) << "f" << '\n';
-            else
-                std::cout << "float: " << static_cast<float>(typeInt) << ".0f" << '\n';
+            std::cout << "float: " << std::fixed << std::setprecision(1) << static_cast<float>(typeInt) << "f\n";
+			std::cout << "double: " << static_cast<double>(typeInt) << "\n";
         }
     }
-    /******************FLOAT_TYPE**************/
-    
-    if (retType == 3)
+    /******************FLOAT_TYPE && DOUBLE_TYPE**************/
+    if (retType == 3 || retType == 4)
     {
-        
-        // std::cout << std::fixed << std::setprecision(1);
-        print_char(retType, 0, myFloat);
-        std::cout << "int: " << static_cast<int>(myFloat) << '\n';
-        if (type.length() >= 8 || type[type.find_first_of(".") + 1] != 'f')
-            std::cout << "float: " << myFloat << "f\n";
-        else if (check_dot && type.find_first_of(".") <= 6)
-            std::cout << "float: " << myFloat << ".0f\n";
-
-        // if (check_dot && type.find_first_of(".") != std::string::npos && type.find_first_of(".") <= 6)
-        //     std::cout << "float: " << myFloat << ".0f\n";
-        // std::cout << "float: " << myFloat << "f\n";
-        // else if (!check_dot)
-        //     std::cout << "float: " << myFloat << "f\n";
+        std::cout << std::fixed << std::setprecision(1);
+        print_char(myDb);
+        if (myDb < INT_MIN ||  myDb > INT_MAX)
+            std::cout << "int: impossible\n";
+        else
+            std::cout << "int: " << static_cast<int>(myDb) << "\n";
+        std::cout << "float: " << static_cast<float>(myDb) << "f\n";
+        std::cout << "double: " << myDb << "\n";
     }
-
 }
 
 ScalarConverter::~ScalarConverter(){}
